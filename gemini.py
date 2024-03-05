@@ -95,7 +95,7 @@ numerical_results = [numerical_solution(x) for x in x_values]
 plt.plot(x_values, numerical_results, label='Numerical Solution')
 plt.xlabel('x')
 plt.ylabel(r'$u(x)$')
-plt.title('Numerical Solution of the Singular Integral Equation')
+plt.title(f"Numerical Solution {display_formula()}")
 plt.legend()
 
 # Display the formula on the plot
