@@ -15,65 +15,82 @@ def chebyshev_second_kind(n, x):
 def kernel_function(x, t):
     return x * t / (t - x)
 
-def f(x):
-    return np.sqrt(1 - x**2) * chebyshev_second_kind(2, x) + 4 * x**5 - 3 * x**3
-
-def integral_terms(k, j):
-    integrand = lambda x: weight_function(x) * chebyshev_second_kind(k, x) * chebyshev_second_kind(j, x)
-    result, _ = quad(integrand, -1, 1)
-    return result
-
-def construct_linear_system():
-    A_matrix = np.array([[integral_terms(k, j) for j in range(4)] for k in range(4)])
-    B_vector = np.array([quad(lambda x: chebyshev_second_kind(1, x)**2 * chebyshev_second_kind(j, x), -1, 1)[0] / 2 for j in range(4)])
-    C_vector = np.array([quad(lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(2, x) * chebyshev_second_kind(j, x), -1, 1)[0] / 2 for j in range(4)])
-    D_vector = np.array([quad(lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(3, x) * chebyshev_second_kind(j, x), -1, 1)[0] / 2 for j in range(4)])
-    E_vector = np.array([quad(lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(4, x) * chebyshev_second_kind(j, x), -1, 1)[0] / 2 for j in range(4)])
-    F_vector = np.array([quad(lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(5, x) * chebyshev_second_kind(j, x), -1, 1)[0] / 2 for j in range(4)])
-    G_vector = np.array([quad(lambda x: f(x) * chebyshev_second_kind(j, x), -1, 1)[0] for j in range(4)])
-
-    return A_matrix + B_vector[:, None] + C_vector[:, None] + D_vector[:, None] + E_vector[:, None] + F_vector[:, None], G_vector
-
-def solve_linear_system():
-    A, b = construct_linear_system()
-    return np.linalg.solve(A, b)
-
-def numerical_solution(x, coefficients):
-    return np.sum(coefficients[k] * chebyshev_second_kind(k, x) for k in range(4))
-
-def display_formula(coefficients):
+def display_formula(solution):
     formula = r"$u(x) = "
-    for k in range(4):
-        formula += f"{coefficients[k]:.4f}U_{k}(x) + "
+    for k in range(len(solution)):
+        formula += f"{solution[k]:.4f}U_{k}(x) + "
     formula = formula[:-2] + "$"
     return formula
 
-# Solve the linear system
-solution_coefficients = solve_linear_system()
+def solve_singular_integral_equation(f):
+    def A_kj(k, j):
+        integrand = lambda x: weight_function(x) * chebyshev_second_kind(k, x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result
 
-# Display the solution coefficients
-print("Numerical solution coefficients:", solution_coefficients)
+    def B_j(j):
+        integrand = lambda x: chebyshev_second_kind(1, x)**2 * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result / 2
 
-# Display the formula for the unknown function
-print(display_formula(solution_coefficients))
+    def C_j(j):
+        integrand = lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(2, x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result / 2
 
-# Construct the numerical solution function
-def numerical_solution_function(x):
-    return numerical_solution(x, solution_coefficients)
+    def D_j(j):
+        integrand = lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(3, x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result / 2
 
-# Display the numerical solution for a specific x
-x_values = np.linspace(-1, 1, 1000)
-numerical_results = [numerical_solution_function(x) for x in x_values]
+    def E_j(j):
+        integrand = lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(4, x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result / 2
 
-# Plot the numerical solution
-plt.plot(x_values, numerical_results, label='Numerical Solution')
-plt.xlabel('x')
-plt.ylabel(r'$u(x)$')
-plt.title('Numerical Solution of the Singular Integral Equation')
-plt.legend()
+    def F_j(j):
+        integrand = lambda x: chebyshev_second_kind(1, x) * chebyshev_second_kind(5, x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result / 2
 
-# Display the formula on the plot
-plt.text(0.5, 2.5, display_formula(solution_coefficients), fontsize=12, color='red')
+    def G_j(j):
+        integrand = lambda x: f(x) * chebyshev_second_kind(j, x)
+        result, _ = quad(integrand, -1, 1)
+        return result
 
-# Show the plot
-plt.show()
+    A_matrix = np.array([[A_kj(k, j) for j in range(4)] for k in range(4)])
+    B_vector = np.array([B_j(j) for j in range(4)])
+    C_vector = np.array([C_j(j) for j in range(4)])
+    D_vector = np.array([D_j(j) for j in range(4)])
+    E_vector = np.array([E_j(j) for j in range(4)])
+    F_vector = np.array([F_j(j) for j in range(4)])
+    G_vector = np.array([G_j(j) for j in range(4)])
+
+    solution = np.linalg.solve(A_matrix + B_vector[:, None] + C_vector[:, None] + D_vector[:, None] + E_vector[:, None] + F_vector[:, None], G_vector)
+
+    # Display the solution coefficients
+    print("Numerical solution coefficients:", solution)
+
+    def numerical_solution(x):
+        return np.sum(solution[k] * chebyshev_second_kind(k, x) for k in range(4))
+
+    # Display the formula for the unknown function
+    print(display_formula(solution))
+
+    # Display the numerical solution for a specific x
+    x_values = np.linspace(-1, 1, 1000)
+    numerical_results = [numerical_solution(x) for x in x_values]
+
+    # Plot the numerical solution
+    plt.plot(x_values, numerical_results, label='Numerical Solution')
+    plt.xlabel('x')
+    plt.ylabel(r'$u(x)$')
+    plt.title('Numerical Solution of the Singular Integral Equation')
+    plt.legend()
+    plt.show()
+
+# Example usage with a custom function
+def custom_function(x):
+    return np.exp(-x**2)
+
+solve_singular_integral_equation(custom_function)
